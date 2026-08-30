@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>猜歌競速</title>
+<style>
+:root{
+  --bg:#140D1E; --card:#1E1530; --card2:#271B3D; --line:#3A2B54;
+  --ink:#F0EAF8; --dim:#9C8FB3;
+  --violet:#A855F7; --violet-d:#6D3FA8;
+  --gold:#E8B04B; --red:#E05E6B; --green:#5FCB92;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}
+body{
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  line-height:1.6;min-height:100vh;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+button{font-family:inherit;cursor:pointer}
+.app{max-width:640px;margin:0 auto;padding:20px 18px 50px}
+.hide{display:none!important}
+
+/* ---- 開始畫面 ---- */
+.title{font-size:34px;font-weight:800;letter-spacing:.08em;margin:34px 0 4px;text-align:center}
+.sub{text-align:center;color:var(--dim);font-size:14px;margin-bottom:34px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.panel h2{margin:0 0 10px;font-size:16px;letter-spacing:.04em}
+.rules{color:var(--dim);font-size:14px;margin:0;padding-left:20px}
+.rules li{margin-bottom:5px}
+.field{width:100%;background:#120C1B;border:1px solid var(--line);color:var(--ink);
+  padding:13px 14px;border-radius:11px;font-size:16px;margin-top:6px}
+.big{
+  width:100%;margin-top:18px;padding:17px;border:none;border-radius:13px;
+  background:var(--violet);color:#fff;font-size:18px;font-weight:700;letter-spacing:.08em;
+}
+.big:disabled{opacity:.45}
+.ghost{background:var(--card2);border:1px solid var(--line);color:var(--ink);font-weight:600}
+
+/* ---- 遊戲 ---- */
+.hud{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.clock{font-variant-numeric:tabular-nums;font-size:30px;font-weight:800;letter-spacing:.02em}
+.prog{margin-left:auto;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums}
+.track{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-bottom:20px}
+.fill{height:100%;background:var(--violet);width:0;transition:width .25s}
+
+.qtype{font-size:12px;letter-spacing:.18em;color:var(--violet);font-weight:700;margin-bottom:8px}
+.qtext{font-size:20px;font-weight:600;line-height:1.5;margin:0 0 18px;white-space:pre-line}
+
+.audio-box{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:26px 20px;text-align:center;margin-bottom:18px}
+.play{width:78px;height:78px;border-radius:50%;border:none;background:var(--violet);
+  color:#fff;font-size:28px;display:inline-flex;align-items:center;justify-content:center}
+.play.playing{background:var(--violet-d)}
+.audio-note{color:var(--dim);font-size:13px;margin-top:12px}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{
+  width:100%;text-align:left;padding:16px 18px;border-radius:13px;
+  background:var(--card);border:1px solid var(--line);color:var(--ink);
+  font-size:17px;font-weight:500;transition:background .12s,border-color .12s;
+}
+.opt:hover{border-color:var(--violet-d)}
+.opt.wrong{background:#3A1A22;border-color:var(--red);color:#F1AFB6}
+.opt.right{background:#183828;border-color:var(--green);color:#A6E8C4}
+
+/* ---- 結算 ---- */
+.card-out{
+  background:linear-gradient(160deg,#2A1B44,#1A1029);
+  border:1px solid var(--violet-d);border-radius:20px;padding:28px 24px;text-align:center;
+}
+.rank{font-size:13px;letter-spacing:.22em;color:var(--gold);font-weight:700}
+.final{font-size:52px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin:6px 0 0}
+.final span{font-size:22px;font-weight:600;margin-left:4px}
+.who{color:var(--dim);font-size:15px;margin-top:10px}
+.stats{display:flex;justify-content:center;gap:26px;margin-top:20px;
+  padding-top:18px;border-top:1px solid rgba(255,255,255,.09)}
+.stat b{display:block;font-size:21px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--dim)}
+.review{margin-top:22px}
+.rv{display:flex;gap:10px;padding:11px 13px;border:1px solid var(--line);
+  border-radius:10px;margin-bottom:7px;font-size:14px;align-items:flex-start}
+.rv .ic{flex:none;font-weight:700}
+.rv.ok .ic{color:var(--green)} .rv.no .ic{color:var(--red)}
+.rv .tx{flex:1}
+.rv .ans{color:var(--dim);font-size:13px}
+.loadwrap{text-align:center;padding:60px 0}
+.spin{width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--violet);
+  border-radius:50%;margin:0 auto 16px;animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}.fill{transition:none}}
+.warn{color:var(--gold);font-size:13.5px;margin-top:10px}
+
+/* ---- 過場 ---- */
+.tw{text-align:center;padding:78px 0}
+.tw .step{font-size:12px;letter-spacing:.24em;color:var(--dim);font-weight:700}
+.tw .nm{font-size:38px;font-weight:800;letter-spacing:.1em;margin:10px 0 22px}
+.tw .cnt{font-size:14px;color:var(--dim)}
+.tw .paused{margin-top:26px;font-variant-numeric:tabular-nums;font-size:28px;font-weight:700;color:var(--gold)}
+.tw .plabel{font-size:12px;color:var(--dim);letter-spacing:.14em;margin-top:2px}
+.clock.hold{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ============ 開始 ============ -->
+<section id="scStart">
+  <div class="title">猜歌競速</div>
+  <div class="sub">暫定名稱・測試版</div>
+  <div class="panel">
+    <h2>玩法</h2>
+    <ul class="rules">
+      <li>10 題，答對才能進下一題</li>
+      <li>從按下開始就計時，比誰用的秒數少</li>
+      <li>答錯不扣分，但秒數會一直跑</li>
+      <li>聽歌題可以無限重播，也可以聽到一半就作答</li>
+    </ul>
+    <label style="display:block;margin-top:18px;font-size:14px;color:var(--dim)">暱稱
+      <input class="field" id="nick" maxlength="12" placeholder="最多 12 個字">
+    </label>
+    <button class="big" id="btnStart">開始</button>
+    <div id="best" class="audio-note" style="text-align:center"></div>
+  </div>
+</section>
+
+<!-- ============ 載入 ============ -->
+<section id="scLoad" class="hide">
+  <div class="loadwrap">
+    <div class="spin"></div>
+    <div id="loadTxt">準備中…</div>
+    <div class="audio-note">正在載入這一輪的音檔，載完才開始計時</div>
+    <div id="loadWarn" class="warn"></div>
+  </div>
+</section>
+
+<!-- ============ 過場 ============ -->
+<section id="scGate" class="hide">
+  <div class="tw">
+    <div class="step" id="gStep"></div>
+    <div class="nm" id="gName"></div>
+    <div class="cnt" id="gCnt"></div>
+    <div class="paused" id="gTime"></div>
+    <div class="plabel">計時暫停</div>
+  </div>
+</section>
+
+<!-- ============ 遊戲 ============ -->
+<section id="scPlay" class="hide">
+  <div class="hud">
+    <div class="clock" id="clock">0.0</div>
+    <div class="prog" id="prog"></div>
+  </div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+
+  <div class="qtype" id="qtype"></div>
+  <div id="audioBox" class="audio-box hide">
+    <button class="play" id="btnPlay">▶</button>
+    <div class="audio-note" id="playNote">點一下播放，可以重複聽</div>
+  </div>
+  <p class="qtext" id="qtext"></p>
+  <div class="opts" id="opts"></div>
+</section>
+
+<!-- ============ 結算 ============ -->
+<section id="scEnd" class="hide">
+  <div class="card-out">
+    <div class="rank" id="rank"></div>
+    <div class="final" id="finalT"></div>
+    <div class="who" id="who"></div>
+    <div class="stats">
+      <div class="stat"><b id="stWrong"></b><span>答錯次數</span></div>
+      <div class="stat"><b id="stBest"></b><span>個人最佳</span></div>
+    </div>
+  </div>
+  <button class="big ghost" id="btnAgain">再玩一次</button>
+  <div class="review" id="review"></div>
+</section>
+
+</div>
+
+<script>
+/* ==================================================================
+   題庫　　※ 要加題目直接改這一區
+   ================================================================== */
+
+/* ---- 猜歌名（tier A 抽 1、B 抽 1、C 抽 3） ---- */
+const SONGS = [
+{tier:"A",song:"光年之外",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/97/4f/e7/974fe739-8319-f45d-a4fa-34d77b1bec25/mzaf_2902864200094899486.plus.aac.p.m4a",start:0,len:10},
+{tier:"A",song:"多遠都要在一起",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview126/v4/1a/ee/08/1aee0846-45d0-2a42-a8f6-3302f3ab81c0/mzaf_2520514879246129018.plus.aac.p.m4a",start:0,len:10},
+{tier:"A",song:"再見",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/81/44/04/8144047b-2f50-0866-64fc-df24218d4dc7/mzaf_16657974939171421599.plus.aac.p.m4a",start:0,len:10},
+{tier:"A",song:"來自天堂的魔鬼",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/25/38/61/25386185-d4b0-8076-de48-dcac072fa8ba/mzaf_11033846317335446724.plus.aac.p.m4a",start:0,len:10},
+{tier:"A",song:"倒數",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d2/70/22/d2702208-bfde-fb3e-d7cd-6b962ef40d36/mzaf_366523854842282670.plus.aac.p.m4a",start:0,len:10},
+
+{tier:"B",song:"離心力",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/43/91/18/439118cd-4328-ec92-9a2f-9ebf21edc4e5/mzaf_2853003547467972427.plus.aac.p.m4a",start:0,len:10},
+{tier:"B",song:"只有我和你的地方",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/76/25/e2/7625e242-cc7e-96cf-7d11-8e112bfd45d6/mzaf_12762557392878032333.plus.aac.p.m4a",start:0,len:10},
+{tier:"B",song:"GLORIA",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d4/06/21/d40621c7-e5c6-09f1-c6c9-789bfc6e3e70/mzaf_7101680528695618695.plus.aac.p.m4a",start:0,len:10},
+{tier:"B",song:"摩天動物園",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/56/cd/d5/56cdd593-29c9-dbc7-26c1-cccc5273f731/mzaf_10661072350980344126.plus.aac.p.m4a",start:0,len:10},
+{tier:"B",song:"灰狼",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c8/fa/06/c8fa0637-a370-9136-f8ec-58a3ce756694/mzaf_7107581463535905557.plus.aac.p.m4a",start:14.7,len:10},
+{tier:"B",song:"句號",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/08/c1/9b/08c19baa-b5cc-d1ac-34ec-c133b38bc237/mzaf_3381328536345356047.plus.aac.p.m4a",start:0,len:10},
+{tier:"B",song:"很久以後",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a9/d3/34/a9d334cd-077f-5cb7-88cb-1d014ab2fac9/mzaf_7031579814304915505.plus.aac.p.m4a",start:19.67,len:10},
+
+{tier:"C",song:"毒蘋果",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/ee/1d/34/ee1d3420-8af5-fee9-a7b3-5f5cc804cd1c/mzaf_11896220234360629147.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"那一夜",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/ab/ee/d1/abeed141-9d92-e270-84e3-4397f8a8eb6f/mzaf_13376445704553951363.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"孤獨",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/bb/71/69/bb7169d2-70cf-fd37-c15d-bc8bb7f9260c/mzaf_12455106420036864343.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"錯過不錯",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/d4/f5/20/d4f520b2-e652-9b1a-ed6f-f35547dccf12/mzaf_8743585070672497022.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"另一個童話",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/be/30/11/be301126-8d9e-37ec-16b7-d78cb00e78aa/mzaf_12354230614211482271.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"平行世界",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/9e/3b/ac/9e3bacbf-9bd5-6604-281d-8ff4d479916d/mzaf_1009724499285695606.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"萬國覺醒",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/09/44/e9/0944e988-7320-5888-6c58-e80466ad6dc3/mzaf_6427141938628681292.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"失真",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/27/ab/c9/27abc970-3308-0cc6-d6eb-d7d531a8cf59/mzaf_7722080122771566277.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"奇蹟",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/92/fc/80/92fc8045-a91a-9732-49b3-7dfb163ef7bd/mzaf_17853085363296828091.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"One Button",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/93/8d/2b/938d2b81-874d-bd46-45f9-c7eae226f758/mzaf_13032134472831169229.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"Fly Away",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ea/3e/88/ea3e88d7-fb85-4d13-84b4-3235fe0d92b1/mzaf_16057132191690827396.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"我不懂愛",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f9/e4/c1/f9e4c1d8-7a1b-c830-de89-8f7f05e9dc0f/mzaf_8355159264185269643.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"有心人",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/40/fa/ea/40faea3e-fdb6-fb12-0a42-70ba00aa3263/mzaf_2824208912162024323.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"寂寞星球的玫瑰",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/9f/68/9d/9f689deb-91f8-c423-1998-fbbb2bafb6d7/mzaf_13252985098020210588.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"瞬間",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/b1/1c/74/b11c748d-d6db-f3a5-f9b7-e25f70529793/mzaf_16699536043964918424.plus.aac.p.m4a",start:0.7,len:10},
+{tier:"C",song:"塞納河",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/00/9e/38/009e3800-cdae-7d89-bc76-2396ccbacfe4/mzaf_3127445093465367596.plus.aac.p.m4a",start:0,len:10},
+{tier:"C",song:"What Have U Done",url:"https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a6/f9/8a/a6f98acc-428f-4f95-49b5-d9837f0d078a/mzaf_2440051392703802790.plus.aac.p.m4a",start:0,len:15}
+];
+
+/* ---- 文字題（組一抽1、組二抽2、組三抽1、組四抽1） ----
+   每題：q = 題目，a = 選項陣列，第一個就是正解（畫面上會打亂）  */
+const TEXT = {
+g1:[
+ {q:"《來自天堂的魔鬼》中出現了幾個 away？", a:["53","56","58","52"]},
+ {q:"G.E.M. 鄧紫棋因慘痛的分手經歷，衝動下買了飛往哪裡的機票，後在當地得到靈感寫出《泡沫》這首歌？", a:["紐約","華盛頓","巴黎","韓國"]},
+ {q:"G.E.M. 鄧紫棋受邀出席有「科學界奧斯卡」之稱的美國「科學突破獎」頒獎典禮，演唱了哪首歌？", a:["光年之外","多遠都要在一起","泡沫","倒數"]},
+ {q:"G.E.M. 鄧紫棋曾為哪位迪士尼角色配粵語配音？", a:["雲妮露","茉莉公主","多莉","彼得潘"]},
+ {q:"以下哪一首歌，G.E.M. 鄧紫棋在《我是歌手》中沒有演唱過？", a:["新的心跳","泡沫","你把我灌醉","喜歡你"]}
+],
+g2:[
+ {q:"以下哪首歌不收錄於《Xposed》專輯中？", a:["穿越火線","Oh Boy","Someday I'll Fly","奇蹟"]},
+ {q:"以下哪首歌不收錄於《18…》專輯中？", a:["愛現在的我","意式戀愛","我不懂愛","想講你知"]},
+ {q:"以下哪首歌不收錄於《摩天動物園》專輯中？", a:["孤獨","別勉強","螢火","依然睡公主"]},
+ {q:"以下哪首歌不收錄於《新的心跳》專輯中？", a:["後會無期","一路逆風","來自天堂的魔鬼","查克靠近"]},
+ {q:"以下哪首歌不收錄於《MySecret》專輯中？", a:["Game Over","Good to be Bad","我的秘密","美好的舊時光"]}
+],
+g3:[
+ {q:"《透明》代表的動物是？", a:["變色龍","貓頭鷹","耶穌蜥蜴","竹節蟲"]},
+ {q:"《很久以後》代表的動物是？", a:["貓","貓頭鷹","人類","小白豬"]},
+ {q:"《好想好想你》代表的動物是？", a:["鹿","孔雀","螢火蟲","兔子"]},
+ {q:"《差不多姑娘》代表的動物是？", a:["孔雀","變色龍","人類","雞"]},
+ {q:"《Fly Away》代表的動物是？", a:["貓頭鷹","刺蝟","人類","獅子"]}
+],
+g4:[
+ {q:"以下哪一首歌是「致天堂的信」？", a:["HELL","GLORIA","天空沒有極限","FIND YOU"]},
+ {q:"以下哪一首歌是「致天堂的信」？", a:["少年與海","夜的盡頭","天空沒有極限","離心力"]},
+ {q:"以下哪一首歌是「天堂的回信」？", a:["GLORIA","你不是第一個離開的人","不想回家","只有我和你的地方"]},
+ {q:"以下哪一首歌是「天堂的回信」？", a:["夜的盡頭","冰河時代","不想回家","少年與海"]}
+]
+};
+
+/* 接字題統一的播放長度（秒）。
+   接字題一定要聽到斷點才答得出來，所以長度不一致 = 有人被迫多等，跟實力無關。
+   這裡統一之後，你標記時設多少都沒關係，遊戲一律用這個值。
+   想改回各題各自的長度，把它設成 null。 */
+const FILL_LEAD = null;
+
+/* ---- 接字題 ----
+   把標記工具「匯出」出來的 fill 陣列整段貼進中括號裡就好，格式不用改。
+   還沒有題目時，這一關會自動跳過。 */
+const FILL = [
+  {"trackName": "奇蹟", "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/92/fc/80/92fc8045-a91a-9732-49b3-7dfb163ef7bd/mzaf_17853085363296828091.plus.aac.p.m4a", "cutSec": 20.36, "leadIn": 3, "options": ["曾經", "心靈", "自己", "過往"], "answer": "A"},
+  {"trackName": "查克靠近", "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/49/3f/20/493f20fc-6d17-0256-47b5-ff0b1666a794/mzaf_915828849477107948.plus.aac.p.m4a", "cutSec": 10.24, "leadIn": 3, "options": ["背影", "手心", "回應", "心情"], "answer": "A"},
+  {"trackName": "兩個自己", "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview116/v4/be/10/f8/be10f86b-5d4f-2568-8404-521a41f8fc9e/mzaf_17607343050215327374.plus.aac.p.m4a", "cutSec": 12.32, "leadIn": 6, "options": ["消息", "話語", "回憶", "現象"], "answer": "A"},
+  {"trackName": "回憶的沙漏 (G.E.M.重生版)", "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/1c/52/8d/1c528d09-c542-994f-fdd1-1e594daceff8/mzaf_17176795067299541611.plus.aac.p.m4a", "cutSec": 27.54, "leadIn": 5, "options": ["傷口", "傷痛", "商量", "傷痕"], "answer": "A"},
+  {"trackName": "突然之間", "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/ce/a3/9a/cea39ad9-1724-873d-e99f-efd573db9772/mzaf_3933043911689737911.plus.aac.p.m4a", "cutSec": 9.36, "leadIn": 5, "options": ["理由", "緣由", "你有", "灑脫"], "answer": "A"}
+];
+
+/* ---- 稱號（暫定，等你定案再換） ---- */
+const RANKS = [
+ {max:45, name:"這根本住在她歌單裡"},
+ {max:70, name:"骨灰級"},
+ {max:100,name:"認真在追的人"},
+ {max:150,name:"聽過不少"},
+ {max:1e9,name:"再多聽幾遍"}
+];
+
+/* ==================================================================
+   以下是遊戲程式，平常不用動
+   ================================================================== */
+const $ = id => document.getElementById(id);
+const rnd = n => Math.floor(Math.random()*n);
+function pick(arr,n){ const c=arr.slice(); const o=[]; while(n-->0 && c.length) o.push(c.splice(rnd(c.length),1)[0]); return o; }
+function shuffle(a){ const c=a.slice(); for(let i=c.length-1;i>0;i--){const j=rnd(i+1);[c[i],c[j]]=[c[j],c[i]];} return c; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){ return null; } }
+
+/* 關卡順序：文字 → 接字 → 猜歌名 */
+const PLAN = [
+  {key:"text", name:"問答"},
+  {key:"fill", name:"接字"},
+  {key:"song", name:"聽歌辨曲"}
+];
+
+let stages=[], si=0, qi=0, wrong=0, nick="";
+let acc=0, running=false, t0=0, raf=null;
+const au = new Audio(); au.preload="auto";
+let clipEnd=null, unlocked=false;
+
+let seekWant=null, seekTries=0;
+au.addEventListener("timeupdate",()=>{
+  if(seekWant!=null){
+    if(au.currentTime < seekWant - 0.3 && seekTries < 6){
+      seekTries++; try{ au.currentTime = seekWant; }catch(e){} return;
+    }
+    seekWant = null;
+  }
+  if(clipEnd!=null && au.currentTime>=clipEnd){ au.pause(); clipEnd=null; setPlay(false); }
+});
+au.addEventListener("ended",()=>{ clipEnd=null; setPlay(false); });
+
+/* ---------- 計時（過場時真的停下） ---------- */
+function secs(){ return (acc + (running? performance.now()-t0 : 0))/1000; }
+function tick(){ $("clock").textContent = secs().toFixed(1); raf = requestAnimationFrame(tick); }
+function clockStart(){ t0=performance.now(); running=true; cancelAnimationFrame(raf); raf=requestAnimationFrame(tick); }
+function clockStop(){ if(running){ acc += performance.now()-t0; running=false; } cancelAnimationFrame(raf); }
+
+/* ---------- 出題 ---------- */
+function buildRound(){
+  const out=[];
+
+  // 文字題：固定按 組一 → 組二 → 組二 → 組三 → 組四
+  const g2 = pick(TEXT.g2,2);
+  const textPicked = [ pick(TEXT.g1,1)[0], g2[0], g2[1], pick(TEXT.g3,1)[0], pick(TEXT.g4,1)[0] ].filter(Boolean);
+  out.push({key:"text", name:"問答", qs: textPicked.map(t=>({
+    kind:"text", q:t.q, opts:shuffle(t.a), ans:t.a[0]
+  }))});
+
+  // 接字題：隨機抽 5
+  const fillPicked = pick(FILL,5);
+  out.push({key:"fill", name:"接字", qs: fillPicked.map(f=>{
+    const ansIdx = {A:0,B:1,C:2,D:3}[f.answer] ?? 0;
+    return { kind:"fill", data:f, q:"接下來是哪一個字？",
+             opts:shuffle(f.options.slice()), ans:f.options[ansIdx] };
+  })});
+
+  // 猜歌名：A 抽 1、B 抽 1、C 抽 3
+  const usedUrl = new Set(fillPicked.map(f=>f.previewUrl));
+  const avail = SONGS.filter(s=>!usedUrl.has(s.url));
+  const A=avail.filter(s=>s.tier==="A"), B=avail.filter(s=>s.tier==="B"), C=avail.filter(s=>s.tier==="C");
+  const chosen = shuffle([...pick(A,1), ...pick(B,1), ...pick(C,3)]);
+  out.push({key:"song", name:"聽歌辨曲", qs: chosen.map(s=>{
+    const others = pick(avail.filter(x=>x.song!==s.song).map(x=>x.song),3);
+    return { kind:"song", data:s, q:"這是哪一首歌？", opts:shuffle([s.song,...others]), ans:s.song };
+  })});
+
+  return out.filter(st=>st.qs.length);   // 沒題目的關直接不出現
+}
+function allQs(){ return stages.reduce((a,s)=>a.concat(s.qs),[]); }
+
+/* ---------- 預載 ---------- */
+function preload(list, done){
+  if(!list.length) return done(0);
+  let left=list.length, failed=0, fin=false;
+  const finish=()=>{ if(!fin){ fin=true; done(failed); } };
+  const timer=setTimeout(finish, 15000);
+  list.forEach(url=>{
+    const a=new Audio(); a.preload="auto"; a.src=url;
+    const ok=()=>{ if(--left<=0){ clearTimeout(timer); finish(); } };
+    a.addEventListener("canplaythrough", ok, {once:true});
+    a.addEventListener("error", ()=>{ failed++; ok(); }, {once:true});
+    a.load();
+  });
+}
+
+/* ---------- 播放 ---------- */
+function setPlay(on){ const b=$("btnPlay"); b.textContent=on?"❚❚":"▶"; b.classList.toggle("playing",on); }
+function clipRange(q){
+  if(q.kind==="song") return [q.data.start, q.data.start+q.data.len];
+  const cut=q.data.cutSec, lead=(FILL_LEAD!=null? FILL_LEAD : (q.data.leadIn||6));
+  return [Math.max(0,cut-lead), cut];
+}
+function playClip(){
+  const q=stages[si].qs[qi];
+  const url = q.kind==="song" ? q.data.url : q.data.previewUrl;
+  const [from,to] = clipRange(q);
+  clipEnd = to;
+  if(au.src!==url) au.src=url;
+  seekWant = from; seekTries = 0;
+  const go=()=>{ try{ au.currentTime=from; }catch(e){} };
+  const p=au.play(); if(p&&p.catch) p.catch(()=>{});
+  if(au.readyState>=1) go(); else au.addEventListener("loadedmetadata",go,{once:true});
+  au.addEventListener("canplay", go, {once:true});
+  setPlay(true);
+}
+function stopClip(){ au.pause(); clipEnd=null; setPlay(false); }
+$("btnPlay").onclick = ()=>{ au.paused ? playClip() : stopClip(); };
+
+/* ---------- 畫面切換 ---------- */
+function show(id){ ["scStart","scLoad","scGate","scPlay","scEnd"].forEach(s=>$(s).classList.toggle("hide", s!==id)); }
+
+function gate(){
+  clockStop();
+  const st = stages[si];
+  $("gStep").textContent = "第 "+(si+1)+" 關 / 共 "+stages.length+" 關";
+  $("gName").textContent = st.name;
+  $("gCnt").textContent = st.qs.length+" 題";
+  $("gTime").textContent = secs().toFixed(2)+" 秒";
+  show("scGate");
+  setTimeout(()=>{ qi=0; clockStart(); show("scPlay"); render(); }, 1500);
+}
+
+function render(){
+  const st = stages[si], q = st.qs[qi];
+  const done = stages.slice(0,si).reduce((n,s)=>n+s.qs.length,0) + qi;
+  const total = allQs().length;
+  $("prog").textContent = "第 "+(done+1)+" / "+total+" 題";
+  $("fill").style.width = (done/total*100)+"%";
+  $("qtype").textContent = st.name;
+  $("qtext").textContent = q.q;
+  const hasAudio = q.kind==="song" || q.kind==="fill";
+  $("audioBox").classList.toggle("hide", !hasAudio);
+  $("playNote").textContent = q.kind==="fill"
+    ? "會播到斷點就停，聽完接下來是哪個字"
+    : "點一下播放，可以重複聽";
+  const box=$("opts"); box.innerHTML="";
+  q.opts.forEach(o=>{
+    const b=document.createElement("button");
+    b.className="opt"; b.textContent=o;
+    b.onclick=()=>answer(b,o);
+    box.appendChild(b);
+  });
+  if(hasAudio){ setPlay(false); playClip(); }
+}
+
+function answer(btn,val){
+  const q = stages[si].qs[qi];
+  if(btn.classList.contains("wrong")) return;
+  if(val===q.ans){
+    btn.classList.add("right");
+    stopClip();
+    setTimeout(()=>{
+      qi++;
+      if(qi < stages[si].qs.length){ render(); }
+      else { si++; if(si < stages.length) gate(); else finish(); }
+    }, 180);
+  }else{
+    wrong++;
+    btn.classList.add("wrong");
+    q._missed = (q._missed||0)+1;
+  }
+}
+
+/* ---------- 結算 ---------- */
+function finish(){
+  clockStop();
+  const s = secs();
+  const r = RANKS.find(x=>s<=x.max);
+  $("finalT").innerHTML = s.toFixed(2)+'<span>秒</span>';
+  $("rank").textContent = r.name;
+  $("who").textContent = nick||"";
+  $("stWrong").textContent = wrong;
+
+  const prev = parseFloat(store("gem_race_best")||"0");
+  const isBest = !prev || s < prev;
+  if(isBest) store("gem_race_best", s.toFixed(2));
+  $("stBest").textContent = (isBest? s : prev).toFixed(2);
+
+  const rv=$("review"); rv.innerHTML="";
+  stages.forEach(st=>{
+    st.qs.forEach(q=>{
+      const bad=(q._missed||0)>0;
+      const d=document.createElement("div");
+      d.className="rv "+(bad?"no":"ok");
+      d.innerHTML='<span class="ic">'+(bad?"✕":"✓")+'</span><div class="tx"></div>';
+      const label = q.kind==="song" ? "聽歌辨曲"
+                  : q.kind==="fill" ? ("接字・"+(q.data.trackName||""))
+                  : q.q;
+      d.querySelector(".tx").innerHTML =
+        '<div>'+esc(label)+'</div><div class="ans">'+esc(q.ans)+(bad?"　（錯了 "+q._missed+" 次）":"")+'</div>';
+      rv.appendChild(d);
+    });
+  });
+  show("scEnd");
+}
+
+/* ---------- 開始 ---------- */
+$("btnStart").onclick = ()=>{
+  nick = $("nick").value.trim();
+  stages = buildRound(); si=0; qi=0; wrong=0; acc=0; running=false;
+
+  // iOS 要在使用者動作當下解鎖音訊
+  if(!unlocked){
+    const first = allQs().find(q=>q.kind==="song"||q.kind==="fill");
+    if(first){
+      au.src = first.kind==="song" ? first.data.url : first.data.previewUrl;
+      const p=au.play(); if(p&&p.then) p.then(()=>au.pause()).catch(()=>{});
+    }
+    unlocked = true;
+  }
+
+  show("scLoad");
+  $("loadWarn").textContent="";
+  const urls=[...new Set(allQs().filter(q=>q.kind==="song"||q.kind==="fill")
+              .map(q=>q.kind==="song"?q.data.url:q.data.previewUrl))];
+  preload(urls, failed=>{
+    if(failed) $("loadWarn").textContent="有 "+failed+" 段音檔載入失敗，還是可以玩，播不出來就重整。";
+    $("clock").textContent="0.0";
+    gate();
+  });
+};
+$("btnAgain").onclick = ()=>{ show("scStart"); refreshBest(); };
+
+function refreshBest(){
+  const b = store("gem_race_best");
+  $("best").textContent = b ? ("個人最佳　"+b+" 秒") : "";
+}
+refreshBest();
+</script>
+</body>
+</html>
